@@ -28,39 +28,67 @@ def analyze(s):
 conn = MongoClient('localhost', 27017)
 db = conn.amazondb  #连接mydb数据库，没有则自动创建
 reviews_set1 = db.reviews_set1 #使用test_set集合，没有则自动创建
+reviews_set3 = db.reviews_set3
 
 
 # natural language understanding
-def nlu(s):
-    rv = review.Review(asin=s.get('asin')
-                       , reviewerId=s.get('reviewerId')
-                       , summary=s.get('summary')
-                       , reviewerName=s.get('reviewerName')
-                       , reviewText=s.get('reviewText')
-                       , helpful=s.get('helpful')
-                       , overall=s.get('overall')
-                       , unixReviewTime=s.get('unixReviewTime')
-                       , reviewTime=s.get('reviewTime')
-                       )
+# def nlu(s):
+#     rv = review.Review(asin=s.get('asin')
+#                        , reviewerId=s.get('reviewerId')
+#                        , summary=s.get('summary')
+#                        , reviewerName=s.get('reviewerName')
+#                        , reviewText=s.get('reviewText')
+#                        , helpful=s.get('helpful')
+#                        , overall=s.get('overall')
+#                        , unixReviewTime=s.get('unixReviewTime')
+#                        , reviewTime=s.get('reviewTime')
+#                        )
+#     reviewText = s.get('reviewText')
+#     res = analyze(reviewText)
+#     #print(json.dumps(res, indent=2))
+#     sentiment = res.get('sentiment').get('document').get('score')
+#     rv.set_sentiment(sentiment)
+#     for keyword in res.get('keywords'):
+#         em = keyword.get('emotion')
+#         kw = review.Keyword(keyword=keyword.get('text')
+#                             , sentiment=keyword.get('sentiment').get('score')
+#                             , relevance= keyword.get('relevance')
+#                             , emotion = em.values())
+#         rv.add_keyword(kw)
+#     return rv
+
+
+# natural language understanding
+def nlu1(s):
     reviewText = s.get('reviewText')
     res = analyze(reviewText)
-    #print(json.dumps(res, indent=2))
     sentiment = res.get('sentiment').get('document').get('score')
-    rv.set_sentiment(sentiment)
+    s['sentiment'] = sentiment
+    s['keywords'] = []
     for keyword in res.get('keywords'):
+        kw = {}
         em = keyword.get('emotion')
-        kw = review.Keyword(keyword=keyword.get('text')
-                            , sentiment=keyword.get('sentiment').get('score')
-                            , relevance= keyword.get('relevance')
-                            , emotion = em.values())
-        rv.add_keyword(kw)
-    return rv
+        kw['keyword'] = keyword.get('text')
+        kw['sentiment'] = keyword.get('sentiment').get('score')
+        kw['relevance'] = keyword.get('relevance')
+        kw['emotion'] = list(em.values())
+        s['keywords'].append(kw)
+
+    return s
 
 
-m = map(nlu, reviews_set1.find({"reviewerID":"A1NHB2VC68YQNM"}))
+
+m = map(nlu1, reviews_set1.find({"reviewerID":"A1NHB2VC68YQNM"}))
+
+# for rev in list(m):
+#     print('sentiment: %s '%(rev.sentiment))
+#     for k in rev.keywords:
+#         print('keyword: %s, relevance: %f,  sentiment: %f, emotion: %s '
+#               %(k.keyword,k.relevance, k.sentiment, list(k.emotion)))
 
 for rev in list(m):
-    print('sentiment: %s '%(rev.sentiment))
-    for k in rev.keywords:
-        print('keyword: %s, relevance: %f,  sentiment: %f, emotion: %s '
-              %(k.keyword,k.relevance, k.sentiment, list(k.emotion)))
+    #js = json.dumps(review.Review(), default=lambda obj: obj.__dict__)
+    # print(rev)
+    reviews_set3.insert(rev)
+
+conn.close()

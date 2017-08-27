@@ -14,7 +14,6 @@ def convert(path):
 
 def insert_record(line):
     js = json.dumps(eval(line))
-    #print(js)
     reviews_set1.insert(json.loads(js))
     return js
 
